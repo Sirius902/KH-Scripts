@@ -1,6 +1,6 @@
 # KH Scripts
 
-Lua scripts for the PC Kingdom Hearts using LuaEngine.
+Lua scripts for PC Kingdom Hearts using LuaEngine.
 
 ## Usage
 
