@@ -1,4 +1,4 @@
--- TODO: JP support, keep party members, ensure game is beatable as forms other than final
+-- TODO: JP support, ensure game is beatable as forms other than final
 local gl = 0x68
 local jp = 0x66
 local offset = 0x56454E
@@ -14,6 +14,7 @@ local add_revert_code = 0x3F072D - offset
 local decrease_form_code = 0x3BE45C - offset
 local party_remove_drive_code = 0x3FE3FD - offset
 local party_remove_load_code = 0x3C07C7 - offset
+local forced_growth_code = 0x3FEF00 - offset
 
 local form_delay_timer = 0
 
@@ -92,25 +93,27 @@ function _OnFrame()
 
         -- Give infinite form gauge in target form
         WriteArray(decrease_form_code, {0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90})
-        WriteArray(party_remove_drive_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
         WriteArray(party_remove_load_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
+        WriteArray(forced_growth_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
     else
         WriteArray(decrease_form_code, {0xF3, 0x0F, 0x11, 0x8B, 0xB4, 0x01, 0x00, 0x00})
-        WriteArray(party_remove_drive_code, {0xE8, 0xFE, 0xFD, 0xFF, 0xFF})
         WriteArray(party_remove_load_code, {0xE8, 0xB4, 0xD4, 0x03, 0x00})
+        WriteArray(forced_growth_code, {0xE8, 0x0B, 0xA7, 0xFA, 0xFF})
     end
 
-    -- Force player into drive form if in normal form and not on carpet or in Armored Xemnas II fight
-    if current_form == 0 and place ~= 0x0E07 and place ~= 0x0507 and place ~= 0x1712 then
+    -- Force player into drive form if in normal form and not on carpet
+    if current_form == 0 and place ~= 0x0E07 and place ~= 0x0507 then
         if form_delay_timer > 0 then
             form_delay_timer = form_delay_timer - ReadFloat(dt_addr)
         else
             SetAction(drive_action_table[target_form])
             WriteArray(zero_action_code, {0x90, 0x90, 0x90})
+            WriteArray(party_remove_drive_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
         end
     else
         form_delay_timer = 30
         WriteArray(zero_action_code, {0x66, 0x89, 0x01})
+        WriteArray(party_remove_drive_code, {0xE8, 0xFE, 0xFD, 0xFF, 0xFF})
     end
 
     -- Give Final Form a weapon if it doesn't have one
@@ -124,6 +127,17 @@ function _OnFrame()
         WriteByte(0x2A20E48+0x40+2-offset, 0x04)
     elseif place == 0x0F0A and events(0x3B, 0x3B, 0x3B) then -- If Groundshaker fight give infinite aerial dodge
         WriteByte(0x2A20E48+0x40+2-offset, 0x05)
+    end
+
+    -- If Armored Xemnas II fight
+    if place == 0x1712 and events(0x49, 0x49, 0x49) then
+        if form == target_form then
+            -- Give max quick run, aerial dodge, glide
+            WriteArray(0x2A20E48+0x40-offset, {0x00, 0x05, 0x05, 0x05, 0x00})
+        else
+            -- Don't give mickey growth abilities
+            WriteArray(0x2A20E48+0x40-offset, {0x00, 0x00, 0x00, 0x00, 0x00})
+        end
     end
 
     -- Pride Lands
