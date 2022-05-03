@@ -5,12 +5,15 @@ local offset = 0x56454E
 local now = 0x0714DB8 - offset
 local game_version = 0x17D - offset
 
-local game_speed = 0x715230 - offset
+local dt_addr = 0x715230 - offset
 local current_form_addr = 0x9AA5D4 - offset
+local player_ptr_addr = 0x2AE7128 - offset
+
 local zero_action_code = 0x3D577B - offset
 local add_revert_code = 0x3F072D - offset
 local decrease_form_code = 0x3BE45C - offset
-local player_ptr_addr = 0x2AE7128 - offset
+local party_remove_drive_code = 0x3FE3FD - offset
+local party_remove_load_code = 0x3C07C7 - offset
 
 local form_delay_timer = 0
 
@@ -74,6 +77,9 @@ function _OnFrame()
     -- Remove Revert button from command menu
     WriteArray(add_revert_code, {0x90, 0x90, 0x90, 0x90, 0x90})
 
+    -- Set Anti-Points to zero
+    WriteInt(0x9AA480+0x40-offset, 0)
+
     local current_form = ReadByte(current_form_addr)
     if current_form == target_form then
         local anim = GetPlayerAnimation()
@@ -86,14 +92,18 @@ function _OnFrame()
 
         -- Give infinite form gauge in target form
         WriteArray(decrease_form_code, {0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90})
+        WriteArray(party_remove_drive_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
+        WriteArray(party_remove_load_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
     else
         WriteArray(decrease_form_code, {0xF3, 0x0F, 0x11, 0x8B, 0xB4, 0x01, 0x00, 0x00})
+        WriteArray(party_remove_drive_code, {0xE8, 0xFE, 0xFD, 0xFF, 0xFF})
+        WriteArray(party_remove_load_code, {0xE8, 0xB4, 0xD4, 0x03, 0x00})
     end
 
     -- Force player into drive form if in normal form and not on carpet or in Armored Xemnas II fight
     if current_form == 0 and place ~= 0x0E07 and place ~= 0x0507 and place ~= 0x1712 then
         if form_delay_timer > 0 then
-            form_delay_timer = form_delay_timer - ReadFloat(game_speed)
+            form_delay_timer = form_delay_timer - ReadFloat(dt_addr)
         else
             SetAction(drive_action_table[target_form])
             WriteArray(zero_action_code, {0x90, 0x90, 0x90})
@@ -128,8 +138,8 @@ function _OnFrame()
     end
 
     -- Change Roxas skateboards
-    WriteString(0x2A37BA0+0x40-offset, "F_TT010_SORA")
-    WriteString(0x2A37BC0+0x40-offset, "F_TT010_SORA.mset")
+    WriteString(0x2A37BA0+0x40-offset, "F_TT010_SORA\0")
+    WriteString(0x2A37BC0+0x40-offset, "F_TT010_SORA.mset\0")
 end
 
 function ComputeCurrentGrowthLevel(form)
