@@ -86,9 +86,11 @@ function _OnFrame()
         local anim = GetPlayerAnimation()
         if anim == 0 then
             -- If T-stanced, switch to actual animation
-            SetPlayerAnimation(16, 2)
-        -- elseif anim == FindPlayerAnimation(52, 1, true) then
-        --     SetPlayerAnimation(0, 2)
+            if world == 0x0A and not (room == 0x0F and events(0x3B, 0x3B, 0x3B)) then
+                SetPlayerAnimation(65, 2)
+            else
+                SetPlayerAnimation(5, 2)
+            end
         end
 
         -- Give infinite form gauge in target form
