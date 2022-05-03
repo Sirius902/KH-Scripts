@@ -41,7 +41,7 @@ local form_keyblade_table = {
     [wisdom_form] = nil,
     [limit_form] = nil,
     [master_form] = 0x9AA40C+0x40,
-    [final_form] = nil,
+    [final_form] = 0x9AA444+0x40,
 }
 
 function _OnInit()
@@ -75,6 +75,21 @@ function _OnFrame()
         return (map == m or not m) and (btl == b or not b) and (evt == e or not e)
     end
 
+    function NeedsFormReset()
+        return place == 0x0A02 and events(0x78, 0x78, 0x78) or -- roxas wall minigame
+            place == 0x0C02 and events(0x7D, 0x7D, 0x7D) or -- roxas bag minigame
+            place == 0x1402 and events(0x89, 0x89, 0x89) or -- stt axel fight
+            world == 0x0A -- pride lands loading zones
+    end
+
+    function SafeToDrive()
+        return place ~= 0x0E07 and -- agrabah ruins
+            place ~= 0x0507 and -- agrabah jafar fight
+            not (place == 0x1612 and events(0x48, 0x48, 0x48)) and -- dragon xemnas fight
+            not (place == 0x0A02 and events(0x78, 0x78, 0x78)) and -- roxas wall minigame
+            not (place == 0x0C02 and events(0x7D, 0x7D, 0x7D)) -- roxas bag minigame
+    end
+
     -- Remove Revert button from command menu
     WriteArray(add_revert_code, {0x90, 0x90, 0x90, 0x90, 0x90})
 
@@ -103,8 +118,12 @@ function _OnFrame()
         WriteArray(forced_growth_code, {0xE8, 0x0B, 0xA7, 0xFA, 0xFF})
     end
 
-    -- Force player into drive form if in normal form and not on carpet
-    if current_form == 0 and place ~= 0x0E07 and place ~= 0x0507 then
+    if NeedsFormReset() and ReadLong(player_ptr_addr) == 0 then
+        WriteByte(current_form_addr, 0)
+    end
+
+    -- Force player into drive form if in normal form and not at an unsafe location
+    if current_form == 0 and SafeToDrive() then
         if form_delay_timer > 0 then
             form_delay_timer = form_delay_timer - ReadFloat(dt_addr)
         else
@@ -113,14 +132,18 @@ function _OnFrame()
             WriteArray(party_remove_drive_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
         end
     else
-        form_delay_timer = 30
+        if current_form == 7 then
+            form_delay_timer = 60 * 5
+        else
+            form_delay_timer = 30
+        end
         WriteArray(zero_action_code, {0x66, 0x89, 0x01})
         WriteArray(party_remove_drive_code, {0xE8, 0xFE, 0xFD, 0xFF, 0xFF})
     end
 
-    -- Give Final Form a weapon if it doesn't have one
+    -- Give form a weapon if it doesn't have one
     if GetFormWeapon(target_form) == 0x0000 then
-        WriteShort(0x009AA444+0x40-offset, 0x0180) -- Set weapon to Struggle Sword
+        SetFormWeapon(target_form, 0x0180) -- Set weapon to Struggle Sword
     end
 
     UnlockForm(target_form)
@@ -144,11 +167,6 @@ function _OnFrame()
 
     -- Pride Lands
     if world == 0x0A then
-        -- Reset to lion form through loading zones
-        if ReadLong(player_ptr_addr) == 0 then
-            WriteByte(current_form_addr, 0)
-        end
-
         -- Give Glide 4
         WriteByte(0x2A20E48+0x40+3-offset, 0x04)
     end
