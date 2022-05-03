@@ -131,7 +131,7 @@ function _OnFrame()
 
     -- If Armored Xemnas II fight
     if place == 0x1712 and events(0x49, 0x49, 0x49) then
-        if form == target_form then
+        if current_form == target_form then
             -- Give max quick run, aerial dodge, glide
             WriteArray(0x2A20E48+0x40-offset, {0x00, 0x05, 0x05, 0x05, 0x00})
         else
