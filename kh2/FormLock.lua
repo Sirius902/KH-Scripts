@@ -122,8 +122,14 @@ function _OnFrame()
         WriteByte(current_form_addr, 0)
     end
 
+    local is_mickey = false
+    local ptr = ReadLong(0xABA7A8+0x40-offset)
+    if ptr ~= 0 and ReadInt(ptr+0xDE0, true) == 0xB then
+        is_mickey = true
+    end
+
     -- Force player into drive form if in normal form and not at an unsafe location
-    if current_form == 0 and SafeToDrive() then
+    if current_form == 0 and SafeToDrive() and not is_mickey then
         if form_delay_timer > 0 then
             form_delay_timer = form_delay_timer - ReadFloat(dt_addr)
         else
@@ -132,11 +138,13 @@ function _OnFrame()
             WriteArray(party_remove_drive_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
         end
     else
-        if current_form == 7 then
-            form_delay_timer = 60 * 5
+        if is_mickey then
+            -- if mickey give longer timer
+            form_delay_timer = 4 * 60
         else
             form_delay_timer = 30
         end
+
         WriteArray(zero_action_code, {0x66, 0x89, 0x01})
         WriteArray(party_remove_drive_code, {0xE8, 0xFE, 0xFD, 0xFF, 0xFF})
     end
