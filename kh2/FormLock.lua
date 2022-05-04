@@ -162,6 +162,7 @@ function _OnFrame()
     elseif place == 0x0F0A and events(0x3B, 0x3B, 0x3B) then -- If Groundshaker fight
         -- Give infinite aerial dodge
         WriteByte(0x2A20E48+0x40+2-offset, 0x05)
+        -- TODO: Find and set end fight flag instead of funny hack
         -- Kill Groundshaker if 500 HP or lower
         local slot2 = ReadLong(slot2_ptr)
         if slot2 ~= 0 and ReadInt(slot2, true) <= 500 then
