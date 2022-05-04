@@ -1,9 +1,10 @@
--- TODO: JP support, ensure game is beatable as forms other than final, fix groundshaker rc
+-- TODO: JP support, ensure game is beatable as forms other than final
 local gl = 0x68
 local jp = 0x66
 local offset = 0x56454E
 local now = 0x0714DB8 - offset
 local game_version = 0x17D - offset
+local slot2_ptr = 0x2A20C58-0x278-0x40 - offset
 
 local dt_addr = 0x715230 - offset
 local current_form_addr = 0x9AA5D4 - offset
@@ -158,8 +159,14 @@ function _OnFrame()
 
     if place == 0x1804 then -- If in CoR puzzle room give aerial dodge max
         WriteByte(0x2A20E48+0x40+2-offset, 0x04)
-    elseif place == 0x0F0A and events(0x3B, 0x3B, 0x3B) then -- If Groundshaker fight give infinite aerial dodge
+    elseif place == 0x0F0A and events(0x3B, 0x3B, 0x3B) then -- If Groundshaker fight
+        -- Give infinite aerial dodge
         WriteByte(0x2A20E48+0x40+2-offset, 0x05)
+        -- Kill Groundshaker if 500 HP or lower
+        local slot2 = ReadLong(slot2_ptr)
+        if slot2 ~= 0 and ReadInt(slot2, true) <= 500 then
+            WriteInt(slot2, 0, true)
+        end
     end
 
     -- If Armored Xemnas II fight
