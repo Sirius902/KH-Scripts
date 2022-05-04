@@ -143,7 +143,7 @@ function _OnFrame()
             -- if mickey give longer timer
             form_delay_timer = 4 * 60
         else
-            form_delay_timer = 30
+            form_delay_timer = 0.5 * 60
         end
 
         WriteArray(zero_action_code, {0x66, 0x89, 0x01})
