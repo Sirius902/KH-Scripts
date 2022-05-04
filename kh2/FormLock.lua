@@ -1,4 +1,4 @@
--- TODO: JP support, ensure game is beatable as forms other than final
+-- TODO: JP support, ensure game is beatable as forms other than final, fix groundshaker rc
 local gl = 0x68
 local jp = 0x66
 local offset = 0x56454E
