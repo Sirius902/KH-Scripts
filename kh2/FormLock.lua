@@ -94,6 +94,9 @@ function _OnFrame()
             not (place == 0x0109 and events(0x34, 0x34, 0x34)) -- yeet the bear
     end
 
+    local player_ptr = ReadLong(player_ptr_addr)
+    local current_form = ReadByte(current_form_addr)
+
     -- Remove Revert button from command menu
     WriteArray(add_revert_code, {0x90, 0x90, 0x90, 0x90, 0x90})
 
@@ -140,8 +143,6 @@ function _OnFrame()
     WriteString(0x2A37BA0+0x40-offset, "F_TT010_SORA\0")
     WriteString(0x2A37BC0+0x40-offset, "F_TT010_SORA.mset\0")
 
-    local player_ptr = ReadLong(player_ptr_addr)
-    local current_form = ReadByte(current_form_addr)
     if current_form == target_form then
         local anim = GetPlayerAnimation()
         if anim == 0 then
