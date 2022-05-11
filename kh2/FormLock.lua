@@ -88,7 +88,8 @@ function _OnFrame()
             place ~= 0x0507 and -- agrabah jafar fight
             not (place == 0x1612 and events(0x48, 0x48, 0x48)) and -- dragon xemnas fight
             not (place == 0x0A02 and events(0x78, 0x78, 0x78)) and -- roxas wall minigame
-            not (place == 0x0C02 and events(0x7D, 0x7D, 0x7D)) -- roxas bag minigame
+            not (place == 0x0C02 and events(0x7D, 0x7D, 0x7D)) and -- roxas bag minigame
+            not (place == 0x0109 and events(0x34, 0x34, 0x34)) -- yeet the bear
     end
 
     -- Remove Revert button from command menu
