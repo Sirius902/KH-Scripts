@@ -17,7 +17,9 @@ local party_remove_drive_code = 0x3FE3FD - offset
 local party_remove_load_code = 0x3C07C7 - offset
 local forced_growth_code = 0x3FEF00 - offset
 
+local form_delay_do_tick = false
 local form_delay_timer = 0
+local normal_form_delay = 10
 
 local normal_form = 0
 local valor_form = 1
@@ -98,59 +100,6 @@ function _OnFrame()
     -- Set Anti-Points to zero
     WriteInt(0x9AA480+0x40-offset, 0)
 
-    local current_form = ReadByte(current_form_addr)
-    if current_form == target_form then
-        local anim = GetPlayerAnimation()
-        if anim == 0 then
-            -- If T-stanced, switch to actual animation
-            if world == 0x0A and not (room == 0x0F and events(0x3B, 0x3B, 0x3B)) then
-                SetPlayerAnimation(65, 2)
-            else
-                SetPlayerAnimation(5, 2)
-            end
-        end
-
-        -- Give infinite form gauge in target form
-        WriteArray(decrease_form_code, {0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90})
-        WriteArray(party_remove_load_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
-        WriteArray(forced_growth_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
-    else
-        WriteArray(decrease_form_code, {0xF3, 0x0F, 0x11, 0x8B, 0xB4, 0x01, 0x00, 0x00})
-        WriteArray(party_remove_load_code, {0xE8, 0xB4, 0xD4, 0x03, 0x00})
-        WriteArray(forced_growth_code, {0xE8, 0x0B, 0xA7, 0xFA, 0xFF})
-    end
-
-    if NeedsFormReset() and ReadLong(player_ptr_addr) == 0 then
-        WriteByte(current_form_addr, 0)
-    end
-
-    local is_mickey = false
-    local ptr = ReadLong(0xABA7A8+0x40-offset)
-    if ptr ~= 0 and ReadInt(ptr+0xDE0, true) == 0xB then
-        is_mickey = true
-    end
-
-    -- Force player into drive form if in normal form and not at an unsafe location
-    if current_form == 0 and SafeToDrive() and not is_mickey then
-        if form_delay_timer > 0 then
-            form_delay_timer = form_delay_timer - ReadFloat(dt_addr)
-        else
-            SetAction(drive_action_table[target_form])
-            WriteArray(zero_action_code, {0x90, 0x90, 0x90})
-            WriteArray(party_remove_drive_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
-        end
-    else
-        if is_mickey then
-            -- if mickey give longer timer
-            form_delay_timer = 4 * 60
-        else
-            form_delay_timer = 0.5 * 60
-        end
-
-        WriteArray(zero_action_code, {0x66, 0x89, 0x01})
-        WriteArray(party_remove_drive_code, {0xE8, 0xFE, 0xFD, 0xFF, 0xFF})
-    end
-
     -- Give form a weapon if it doesn't have one
     if GetFormWeapon(target_form) == 0x0000 then
         SetFormWeapon(target_form, 0x0180) -- Set weapon to Struggle Sword
@@ -182,15 +131,78 @@ function _OnFrame()
         end
     end
 
-    -- Pride Lands
+    -- If Pride Lands give Glide 4
     if world == 0x0A then
-        -- Give Glide 4
         WriteByte(0x2A20E48+0x40+3-offset, 0x04)
     end
 
-    -- Change Roxas skateboards
+    -- Change Roxas skateboards to Sora skateboards
     WriteString(0x2A37BA0+0x40-offset, "F_TT010_SORA\0")
     WriteString(0x2A37BC0+0x40-offset, "F_TT010_SORA.mset\0")
+
+    local player_ptr = ReadLong(player_ptr_addr)
+    local current_form = ReadByte(current_form_addr)
+    if current_form == target_form then
+        local anim = GetPlayerAnimation()
+        if anim == 0 then
+            -- If T-stanced, switch to actual animation
+            if world == 0x0A and not (room == 0x0F and events(0x3B, 0x3B, 0x3B)) then
+                SetPlayerAnimation(65, 2)
+            else
+                SetPlayerAnimation(5, 2)
+            end
+        end
+
+        -- Give infinite form gauge in target form
+        WriteArray(decrease_form_code, {0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90, 0x90})
+        WriteArray(party_remove_load_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
+        WriteArray(forced_growth_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
+    else
+        WriteArray(decrease_form_code, {0xF3, 0x0F, 0x11, 0x8B, 0xB4, 0x01, 0x00, 0x00})
+        WriteArray(party_remove_load_code, {0xE8, 0xB4, 0xD4, 0x03, 0x00})
+        WriteArray(forced_growth_code, {0xE8, 0x0B, 0xA7, 0xFA, 0xFF})
+    end
+
+    if player_ptr == 0 then
+        form_delay_do_tick = false -- unstage tick when Sora is null
+        if NeedsFormReset() then
+            WriteByte(current_form_addr, 0)
+        end
+    else
+        local is_mickey = false
+        local unk_ptr = ReadLong(0xABA7A8+0x40-offset)
+        if unk_ptr ~= 0 and ReadInt(unk_ptr+0xDE0, true) == 0xB then
+            is_mickey = true
+        end
+
+        -- Force player into drive form if in normal form and not at an unsafe location
+        if current_form == 0 and SafeToDrive() and not is_mickey then
+            if form_delay_do_tick then
+                if form_delay_timer > 0 then
+                    form_delay_timer = form_delay_timer - ReadFloat(dt_addr)
+                else
+                    form_delay_do_tick = false
+                    SetAction(drive_action_table[target_form])
+                    WriteArray(zero_action_code, {0x90, 0x90, 0x90})
+                    WriteArray(party_remove_drive_code, {0x48, 0x31, 0xC0, 0x90, 0x90})
+                end
+            else
+                form_delay_timer = normal_form_delay
+                form_delay_do_tick = true
+            end
+        else
+            form_delay_do_tick = true
+            if is_mickey then
+                -- if mickey give longer timer
+                form_delay_timer = 4 * 60
+            else
+                form_delay_timer = 0.5 * 60
+            end
+
+            WriteArray(zero_action_code, {0x66, 0x89, 0x01})
+            WriteArray(party_remove_drive_code, {0xE8, 0xFE, 0xFD, 0xFF, 0xFF})
+        end
+    end
 end
 
 function ComputeCurrentGrowthLevel(form)
